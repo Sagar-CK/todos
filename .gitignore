@@ -1,0 +1,17 @@
+node_modules/
+dist/
+build/
+.env*
+!.env.example
+.vercel/
+supabase/.temp/
+native/ios/*.xcodeproj/
+native/ios/Config.local.xcconfig
+.DS_Store
+supabase/project.json
+native/Shared/BackendConfig.swift
+native/ios/project.generated.yml
+native/ios/Info.plist
+native/ios/WidgetInfo.plist
+native/ios/*.entitlements
+native/ios/Resources/web/

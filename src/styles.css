@@ -1,0 +1,40 @@
+@font-face { font-family: "Sidebar Geist"; font-style: normal; font-weight: 100 900; font-display: swap; src: url("@fontsource-variable/geist/files/geist-latin-wght-normal.woff2") format("woff2"); }
+@font-face { font-family: "Sidebar Geist Mono"; font-style: normal; font-weight: 100 900; font-display: swap; src: url("@fontsource-variable/geist-mono/files/geist-mono-latin-wght-normal.woff2") format("woff2"); }
+* { box-sizing: border-box; }
+body { margin: 0; }
+.visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.graphical-theme {
+  background: var(--neutral-1); color: var(--neutral-10);
+  font: var(--weight-ui-regular) var(--size-m) / var(--line-m) var(--font-ui);
+  letter-spacing: var(--letter-spacing-m); text-wrap: pretty; -webkit-font-smoothing: antialiased;
+}
+.app { min-height: 100dvh; padding: var(--space-xl); padding-top: max(var(--space-xl), env(safe-area-inset-top)); padding-bottom: max(var(--space-xl), env(safe-area-inset-bottom)); }
+.browser { display: flex; justify-content: center; align-items: flex-start; }
+.checklist { width: 100%; max-width: 520px; margin-inline: auto; min-height: calc(100dvh - var(--space-xl) * 2); display: flex; flex-direction: column; }
+.toolbar { display: flex; align-items: center; justify-content: flex-end; gap: var(--space-m); padding-bottom: var(--space-s); user-select: none; }
+.task-list { flex: 1; display: flex; flex-direction: column; }
+ul { list-style: none; margin: 0; padding: 0; }
+.task { display: flex; align-items: center; gap: var(--space-m); padding-block: var(--space-xs); min-height: calc(var(--line-m) + var(--space-m)); }
+.task-title { flex: 1; min-width: 0; overflow-wrap: anywhere; padding: var(--space-xxs) 0; background: none; border: 0; color: inherit; font: inherit; letter-spacing: inherit; text-align: left; white-space: pre-wrap; cursor: text; }
+.task-title:focus-visible { outline: var(--focus-ring-outline); border-radius: var(--radius-s); }
+.completed .task-title { color: var(--neutral-7); text-decoration: line-through; }
+.task-actions { display: flex; flex-shrink: 0; gap: var(--space-xxs); opacity: 0; }
+.task:hover .task-actions, .task:focus-within .task-actions { opacity: 1; }
+.task-actions .delete-icon { color: var(--neutral-6); }
+.task-actions button:hover .delete-icon { color: var(--neutral-8); }
+.inline-editor { flex: 1; width: 100%; min-width: 0; min-height: var(--line-m); border: 0; border-radius: 0; background: none; box-shadow: none; padding: var(--space-xxs) 0; margin: 0; font: inherit; letter-spacing: inherit; color: inherit; resize: none; overflow: hidden; outline: none; }
+.draft-zone { flex: 1; min-height: calc(var(--space-xxl) * 2); cursor: text; }
+.new-task { display: flex; align-items: flex-start; gap: var(--space-m); padding-block: var(--space-xs); opacity: 0; transition: opacity var(--motion-duration) var(--motion-easing); }
+.draft-zone:hover .new-task { opacity: 0.45; }
+.new-task:focus-within, .draft-zone .new-task.has-draft { opacity: 1; }
+.draft-checkbox { display: flex; align-items: center; min-height: calc(var(--line-m) + var(--space-xs)); pointer-events: none; }
+.done-list { padding-top: var(--space-l); }
+.app svg { width: var(--size-m); height: var(--size-m); stroke-width: var(--icon-stroke-width); }
+.account-dialog { max-width: min(400px, calc(100vw - var(--space-xxl))); }
+.account-form { display: flex; flex-direction: column; gap: var(--space-s); padding-top: var(--space-m); }
+.dialog-actions { display: flex; gap: var(--space-s); justify-content: flex-end; padding-top: var(--space-m); }
+.error, .sync-error { color: var(--error); font-size: var(--size-s); line-height: var(--line-s); }
+.sync-error { display: flex; align-items: center; gap: var(--space-s); padding-top: var(--space-l); }
+@media (hover: none) { .task-actions { opacity: 1; } .new-task { opacity: 0.45; } .new-task:focus-within, .new-task.has-draft { opacity: 1; } }
+@media (max-width: 480px) { .app { padding-inline: var(--space-l); } }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }

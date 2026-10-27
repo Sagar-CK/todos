@@ -1,0 +1,64 @@
+:root {
+  --reveal-duration: 220ms;
+  --reveal-easing: cubic-bezier(0.22, 1, 0.36, 1);
+  --reveal-blur: 4px;
+  --shimmer-duration: 1.6s;
+  --loader-delay: 300ms;
+}
+
+@keyframes blur-in {
+  from {
+    filter: blur(var(--reveal-blur));
+    opacity: 0;
+  }
+}
+.blur-in {
+  animation: blur-in var(--reveal-duration) var(--reveal-easing) both;
+}
+.stream-chunk {
+  display: inline;
+  animation: blur-in var(--reveal-duration) var(--reveal-easing) both;
+}
+
+@keyframes shimmer {
+  from {
+    background-position: 150% 0;
+  }
+  to {
+    background-position: -50% 0;
+  }
+}
+.shimmer {
+  color: transparent;
+  background-image: linear-gradient(
+    105deg,
+    var(--neutral-6) 35%,
+    var(--neutral-10) 50%,
+    var(--neutral-6) 65%
+  );
+  background-size: 250% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  animation: shimmer var(--shimmer-duration) linear infinite;
+}
+
+@keyframes delayed-reveal {
+  from {
+    visibility: hidden;
+  }
+}
+.delayed {
+  animation: delayed-reveal 0s linear var(--loader-delay) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .blur-in,
+  .stream-chunk {
+    animation: none;
+  }
+  .shimmer {
+    color: var(--neutral-6);
+    background: none;
+    animation: none;
+  }
+}

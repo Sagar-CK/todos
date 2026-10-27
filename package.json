@@ -1,0 +1,36 @@
+{
+  "name": "todos",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1 --port 5186 --strictPort",
+    "build": "node scripts/generate-config.mjs && tsc && vite build && node scripts/inline-build.mjs",
+    "preview": "vite preview --host 127.0.0.1 --port 5186 --strictPort",
+    "mac:build": "npm run build && bash scripts/build-mac.sh",
+    "mac": "npm run mac:build && open build/Todos.app",
+    "test": "node --experimental-strip-types --test tests/*.test.ts tests/*.test.mjs",
+    "ios:prepare": "bash scripts/prepare-ios.sh"
+  },
+  "dependencies": {
+    "@base-ui/react": "^1.9.0",
+    "@fontsource-variable/geist": "^5.3.0",
+    "@fontsource-variable/geist-mono": "^5.3.0",
+    "@supabase/supabase-js": "^2.118.0",
+    "lucide-react": "^0.468.0",
+    "motion": "^12.43.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "shiki": "^3.23.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.5",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "typescript": "^5.9.3",
+    "vite": "^7.1.0"
+  },
+  "engines": {
+    "node": ">=22.18.0"
+  }
+}
