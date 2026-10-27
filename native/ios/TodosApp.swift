@@ -37,7 +37,9 @@ final class TodoBridge: NSObject, ObservableObject, WKScriptMessageHandler, WKNa
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) { deliverAuth(); resume() }
     func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
         guard message.frameInfo.isMainFrame, let body = message.body as? [String: Any], let type = body["type"] as? String else { return }
-        if type == "session" {
+        if type == "appearance" {
+            if WidgetStore.setAccent(body["accent"] as? String) { WidgetCenter.shared.reloadAllTimelines() }
+        } else if type == "session" {
             if let session = body["session"] as? [String: Any], let data = try? JSONSerialization.data(withJSONObject: session) {
                 if !SessionVault.save(data) {
                     webView?.evaluateJavaScript("window.dispatchEvent(new CustomEvent('todos-native-error', {detail:'Couldn’t share sign-in with the widget. Check App Groups and Keychain signing in Xcode.'}))")

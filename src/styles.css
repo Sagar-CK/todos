@@ -28,7 +28,6 @@ ul { list-style: none; margin: 0; padding: 0; }
 .draft-zone:hover .new-task { opacity: 0.45; }
 .new-task:focus-within, .draft-zone .new-task.has-draft { opacity: 1; }
 .draft-checkbox { display: flex; align-items: center; min-height: calc(var(--line-m) + var(--space-xs)); pointer-events: none; }
-.done-list { padding-top: var(--space-l); }
 .app svg { width: var(--size-m); height: var(--size-m); stroke-width: var(--icon-stroke-width); }
 .account-dialog { max-width: min(400px, calc(100vw - var(--space-xxl))); }
 .account-form { display: flex; flex-direction: column; gap: var(--space-s); padding-top: var(--space-m); }
@@ -38,3 +37,20 @@ ul { list-style: none; margin: 0; padding: 0; }
 @media (hover: none) { .task-actions { opacity: 1; } .new-task { opacity: 0.45; } .new-task:focus-within, .new-task.has-draft { opacity: 1; } }
 @media (max-width: 480px) { .app { padding-inline: var(--space-l); } }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+/* The Mac's 44-point native title strip is quiet until hovered. */
+.native-mac { padding-top: 44px; }
+.app[data-accent="custom"] .inline-editor { caret-color: var(--todo-accent); }
+.app[data-accent="custom"] .completed .task-title { color: color-mix(in srgb, var(--todo-accent) 65%, var(--neutral-1)); text-decoration-color: var(--todo-accent); }
+.app[data-accent="custom"] .task-actions .delete-icon { color: var(--todo-accent); opacity: 0.65; }
+.app[data-accent="custom"] .task-actions button:hover .delete-icon { opacity: 1; }
+.accent-dialog { width: max-content; max-width: calc(100vw - var(--space-xl)); }
+.accent-options { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-xs); padding-top: var(--space-l); }
+.accent-swatch span { display: block; width: var(--size-l); height: var(--size-l); border-radius: var(--radius-full); }
+.accent-swatch[aria-pressed="true"] { outline: var(--focus-ring-outline); outline-offset: var(--space-xxs); }
+.accent-custom { flex-shrink: 0; width: calc(var(--size-l) + var(--space-xs) * 2); height: calc(var(--size-l) + var(--space-xs) * 2); margin-inline-start: var(--space-s); padding: var(--space-xs); border: 0; border-radius: var(--radius-full); background: none; cursor: pointer; }
+.accent-custom:focus-visible { outline: var(--focus-ring-outline); }
+.accent-custom::-webkit-color-swatch-wrapper { padding: 0; }
+.accent-custom::-webkit-color-swatch { border: var(--border-s) solid var(--neutral-6); border-radius: var(--radius-full); }
+.accent-custom::-moz-color-swatch { border: var(--border-s) solid var(--neutral-6); border-radius: var(--radius-full); }
+.sign-in-note { color: var(--neutral-8); margin: 0 0 var(--space-s); }
+.native-mac .checklist { min-height: calc(100dvh - 44px - var(--space-xl)); }

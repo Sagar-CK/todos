@@ -8,15 +8,69 @@ final class TodoPanel: NSPanel {
     override var canBecomeMain: Bool { true }
 }
 
+final class TodoChromeView: NSView {
+    var onClose: (() -> Void)?
+    var onAccent: (() -> Void)?
+    private var hoverArea: NSTrackingArea?
+    private lazy var closeButton = makeButton("xmark", label: "Close Todos", action: #selector(closePanel))
+    private lazy var colorButton = makeButton("paintpalette", label: "Accent color", action: #selector(openAccent))
+    override init(frame: NSRect) {
+        super.init(frame: frame)
+        addSubview(closeButton); addSubview(colorButton)
+        showControls(false)
+    }
+    required init?(coder: NSCoder) { fatalError("init(coder:) is not supported") }
+    private func makeButton(_ symbol: String, label: String, action: Selector) -> NSButton {
+        let button = NSButton(image: NSImage(systemSymbolName: symbol, accessibilityDescription: label)!, target: self, action: action)
+        button.isBordered = false; button.contentTintColor = .secondaryLabelColor
+        button.toolTip = label; button.setAccessibilityLabel(label)
+        return button
+    }
+    override func layout() {
+        super.layout()
+        closeButton.frame = NSRect(x: 12, y: 12, width: 20, height: 20)
+        colorButton.frame = NSRect(x: bounds.width - 32, y: 12, width: 20, height: 20)
+    }
+    override func updateTrackingAreas() {
+        super.updateTrackingAreas()
+        if let hoverArea { removeTrackingArea(hoverArea) }
+        let area = NSTrackingArea(rect: bounds, options: [.mouseEnteredAndExited, .activeAlways, .inVisibleRect], owner: self)
+        addTrackingArea(area); hoverArea = area
+    }
+    private func showControls(_ visible: Bool) { closeButton.isHidden = !visible; colorButton.isHidden = !visible }
+    override func mouseEntered(with event: NSEvent) { showControls(true) }
+    override func mouseExited(with event: NSEvent) { showControls(false) }
+    override func mouseDown(with event: NSEvent) { showControls(true); window?.performDrag(with: event) }
+    override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
+    @objc private func closePanel() { onClose?() }
+    @objc private func openAccent() { onAccent?() }
+}
+
+final class TodoContentView: NSView {
+    let webView: WKWebView
+    let chrome = TodoChromeView()
+    init(webView: WKWebView) {
+        self.webView = webView
+        super.init(frame: .zero)
+        addSubview(webView); addSubview(chrome)
+    }
+    required init?(coder: NSCoder) { fatalError("init(coder:) is not supported") }
+    override func layout() {
+        super.layout()
+        webView.frame = bounds
+        chrome.frame = NSRect(x: 0, y: bounds.height - 44, width: bounds.width, height: 44)
+    }
+}
+
 final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler, WKNavigationDelegate, NSWindowDelegate {
     private let isDemo = CommandLine.arguments.contains("--demo")
     private var panel: TodoPanel!
     private var webView: WKWebView!
+    private var content: TodoContentView!
     private var status: NSStatusItem!
     private var shortcutItem: NSMenuItem!
     private let shortcut = DoubleTap()
     private var permissionTimer: Timer?
-    private var pinned = false
     private var pendingAuth: String?
     private var shortcutRequested = UserDefaults.standard.object(forKey: "DoubleTapEnabled") as? Bool ?? true
     private var shortcutState = "permission-required"
@@ -48,11 +102,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
         panel.standardWindowButton(.closeButton)?.isHidden = true
         panel.standardWindowButton(.miniaturizeButton)?.isHidden = true
         panel.standardWindowButton(.zoomButton)?.isHidden = true
-        panel.isFloatingPanel = true; panel.hidesOnDeactivate = false; panel.level = .normal
+        panel.isFloatingPanel = true; panel.hidesOnDeactivate = false; panel.level = .floating
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         panel.minSize = NSSize(width: 320, height: 240)
         panel.isReleasedWhenClosed = false
-        panel.contentView = webView
+        content = TodoContentView(webView: webView)
+        content.chrome.onClose = { [weak self] in self?.closePanel() }
+        content.chrome.onAccent = { [weak self] in self?.openAccent() }
+        panel.contentView = content
         if isDemo {
             panel.appearance = NSAppearance(named: CommandLine.arguments.contains("--light") ? .aqua : .darkAqua)
             panel.setContentSize(NSSize(width: 440, height: 340)); panel.center()
@@ -66,14 +123,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
         status.button?.image = NSImage(systemSymbolName: "checklist", accessibilityDescription: "Todos")
         let menu = NSMenu()
         let show = NSMenuItem(title: "Open todos", action: #selector(toggle), keyEquivalent: ""); show.target = self; menu.addItem(show)
+        let accent = NSMenuItem(title: "Accent color…", action: #selector(openAccent), keyEquivalent: ""); accent.target = self; menu.addItem(accent)
+        let appearance = NSMenuItem(title: "Switch appearance", action: #selector(switchAppearance), keyEquivalent: ""); appearance.target = self; menu.addItem(appearance)
+        if !isDemo && !BackendConfig.apiKey.isEmpty {
+            let account = NSMenuItem(title: "Account…", action: #selector(openAccount), keyEquivalent: ""); account.target = self; menu.addItem(account)
+        }
         shortcutItem = NSMenuItem(title: "Enable double-tap shortcut…", action: #selector(enableShortcut), keyEquivalent: ""); shortcutItem.target = self; menu.addItem(shortcutItem)
-        let pin = NSMenuItem(title: "Keep on top", action: #selector(togglePin), keyEquivalent: ""); pin.target = self; menu.addItem(pin)
         menu.addItem(.separator())
         let quit = NSMenuItem(title: "Quit Todos", action: #selector(quitApp), keyEquivalent: "q"); quit.target = self; menu.addItem(quit)
         status.menu = menu
         // Standard edit menu supplies Cmd+C/V/X/A inside the web view.
         let main = NSMenu()
         let appItem = NSMenuItem(); let appMenu = NSMenu(title: "Todos")
+        appMenu.addItem(accent.copy() as! NSMenuItem)
+        appMenu.addItem(appearance.copy() as! NSMenuItem)
+        if !isDemo && !BackendConfig.apiKey.isEmpty {
+            let account = NSMenuItem(title: "Account…", action: #selector(openAccount), keyEquivalent: ""); account.target = self; appMenu.addItem(account)
+        }
+        appMenu.addItem(.separator())
         let mainQuit = NSMenuItem(title: "Quit Todos", action: #selector(quitApp), keyEquivalent: "q"); mainQuit.target = self; appMenu.addItem(mainQuit)
         appItem.submenu = appMenu; main.addItem(appItem)
         let fileItem = NSMenuItem(); let file = NSMenu(title: "File")
@@ -112,8 +179,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
         if !isDemo { panel.saveFrame(usingName: "TodosPanel") }
         webView.evaluateJavaScript("window.dispatchEvent(new Event('todos-save-draft'))") { [weak self] _, _ in self?.panel.orderOut(nil); self?.writeShortcutDiagnostic() }
     }
+    @objc func openAccent() { showPanel(); webView.evaluateJavaScript("window.dispatchEvent(new Event('todos-open-accent'))") }
+    @objc func openAccount() { showPanel(); webView.evaluateJavaScript("window.dispatchEvent(new Event('todos-open-account'))") }
+    @objc func switchAppearance() { webView.evaluateJavaScript("window.dispatchEvent(new Event('todos-switch-appearance'))") }
     @objc func undoAction() { webView.evaluateJavaScript("window.dispatchEvent(new Event('todos-undo'))") }
-    @objc func togglePin() { pinned.toggle(); panel.level = pinned ? .floating : .normal }
     @objc func quitApp() {
         if !isDemo { panel.saveFrame(usingName: "TodosPanel") }
         webView.evaluateJavaScript("window.dispatchEvent(new Event('todos-save-draft'))") { [weak self] _, _ in self?.shortcut.stop(); NSApp.terminate(nil) }
@@ -160,7 +229,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
         let snapshot: [String: Any] = ["accessibilityGranted": AXIsProcessTrusted(), "requested": shortcutRequested,
             "eventTapEnabled": shortcut.enabled, "state": shortcutState,
             "secureInput": IsSecureEventInputEnabled(), "activationCount": activationCount,
-            "windowVisible": panel?.isVisible ?? false, "doubleTapInterval": shortcut.interval]
+            "windowVisible": panel?.isVisible ?? false, "doubleTapInterval": shortcut.interval,
+            "alwaysOnTop": panel?.level == .floating]
         guard let data = try? JSONSerialization.data(withJSONObject: snapshot, options: [.sortedKeys]), data != lastDiagnostic else { return }
         lastDiagnostic = data
         let folder = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Logs/Todos", isDirectory: true)
@@ -189,8 +259,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
         guard message.frameInfo.isMainFrame, let body = message.body as? [String: Any], let type = body["type"] as? String else { return }
         switch type {
         case "hide": closePanel()
-        case "drag": if let event = NSApp.currentEvent { panel.performDrag(with: event) }
-        case "pin": togglePin()
+        case "modal": content.chrome.isHidden = body["open"] as? Bool ?? false
         case "shortcut": enableShortcut()
         case "session":
             guard !isDemo else { return }

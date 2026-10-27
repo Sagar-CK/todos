@@ -44,6 +44,10 @@ struct TodoWidgetView: View {
     @Environment(\.widgetFamily) private var family
     @Environment(\.colorScheme) private var colorScheme
     private var open: [WidgetTodo] { entry.tasks.filter { !$0.completed && $0.deleted_at == nil } }
+    private var accent: Color {
+        guard let rgb = WidgetStore.accentRGB else { return .primary }
+        return Color(red: Double((rgb >> 16) & 255) / 255, green: Double((rgb >> 8) & 255) / 255, blue: Double(rgb & 255) / 255)
+    }
     var body: some View {
         VStack(alignment: .leading, spacing: TodoTheme.listGap) {
             if entry.failed { HStack { Spacer(); Image(systemName: "icloud.slash").foregroundStyle(.secondary).accessibilityLabel("Couldn’t sync") } }
@@ -55,7 +59,7 @@ struct TodoWidgetView: View {
                 ForEach(Array(open.prefix(family == .systemLarge ? 10 : 4))) { task in
                     Button(intent: CompleteTodo(taskId: task.id)) {
                         HStack(alignment: .firstTextBaseline, spacing: TodoTheme.rowGap) {
-                            Image(systemName: "square").font(.system(size: TodoTheme.textSize, weight: .light))
+                            Image(systemName: "square").font(.system(size: TodoTheme.textSize, weight: .light)).foregroundStyle(accent)
                             Text(task.title).font(.custom("Geist", size: TodoTheme.textSize).weight(.light)).lineLimit(1)
                             Spacer(minLength: 0)
                         }.foregroundStyle(.primary)

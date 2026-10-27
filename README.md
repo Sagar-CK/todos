@@ -9,7 +9,10 @@ A small checklist for Mac and iPhone. Double-tap the backtick key, write somethi
 
 - Click beneath a task and type. Click away to save, or press Enter for the next row.
 - Edit in place. Delete immediately. Command-Z brings it back.
-- Command-W or Escape saves the draft and hides the window. It remembers its position and size.
+- Checking or reopening a todo keeps it in place.
+- Drag the quiet top strip to move the Mac window. Close and color controls appear on hover. The window stays on top and remembers its position and size.
+- Command-W or Escape saves the draft and hides the window.
+- Choose an accent for checkbox borders and fill, the text cursor, completed tasks, and delete icons. Typed text stays neutral; the checkmark contrasts with its fill. Colors are saved on each device; the phone widget follows its app.
 - Light and charcoal themes, built with Sagar UI.
 - Works locally without an account. Optional sync uses **your own Supabase project**.
 - iOS app and interactive WidgetKit widget included. iOS 17+; device installation requires Xcode and signing.
@@ -55,7 +58,7 @@ Every install is independent. There is no shared hosted backend, developer accou
    Both Supabase fields may be empty for local use. Never put a service-role key, secret key, database password, or management token here. Public client keys ship in the app; row-level security protects the data. The build rejects service-role and secret keys.
 3. In Supabase **Authentication → URL Configuration**, allow `mytodos://auth` (matching your chosen scheme). For the browser preview, also allow `http://127.0.0.1:5186` and `http://localhost:5186`. Set the Site URL to your browser origin if using the preview.
 4. Keep the default magic-link email template. Supabase's default email sender only delivers to your project's organization members and has low rate limits. For other users, [configure custom SMTP](https://supabase.com/docs/guides/auth/auth-smtp).
-5. Rebuild and install the Mac app. Build the iPhone app with the **same `.env.local` settings**. In each app, choose **⋯ → Sync with phone**, enter the same email, and open the emailed link **on that device**. Local tasks are imported when you sign in.
+5. Rebuild and install the Mac app. Build the iPhone app with the **same `.env.local` settings**. The sign-in prompt appears automatically on first launch. Enter the same email on each device and open the emailed link **on that device**. Sync then runs automatically, including retries after reconnecting. If you dismissed sign-in, reopen **Account…** from the Mac menu bar (or the phone’s options). Local tasks are imported when you sign in.
 
 If you already use the Supabase CLI, `node scripts/configure-client.mjs YOUR_PROJECT_REF` fills the two backend fields without changing your native app identifiers. All personal configuration and generated client bundles are ignored by Git.
 
@@ -87,7 +90,9 @@ npm run ios:prepare   # Generate configuration, embed UI, regenerate Xcode proje
 npm test             # Merge/outbox and configuration tests
 ```
 
-Rerun `ios:prepare` after changing the UI or configuration. Generated files are not hand-edited. `components/graphical/theme.ts` controls the web palette and the generated native widget colors.
+Rerun `ios:prepare` after changing the UI or configuration. Generated files are not hand-edited. The Mac menu bar provides **Accent color…**, **Switch appearance**, and **Account…**. The small palette button appears in the window’s top-right corner only on hover.
+
+`components/graphical/theme.ts` controls the web palette and the generated native widget colors.
 
 To take screenshots without opening your real tasks:
 

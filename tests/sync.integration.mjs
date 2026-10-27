@@ -25,8 +25,10 @@ try {
   const signedIn = await remote.auth.signInWithPassword({ email, password }); assert.ifError(signedIn.error);
   const session = signedIn.data.session;
   run('open', 'http://127.0.0.1:5186');
+  await until(() => evaluate("document.querySelector('[role=dialog]')?.textContent.includes('Sign in')").trim() === 'true', 'Initial sign-in was not offered automatically');
   evaluate(`(() => { window.__nativeSession = ${JSON.stringify({ access_token: session.access_token, refresh_token: session.refresh_token })}; window.dispatchEvent(new Event('todos-auth')); return 'auth callback delivered'; })()`);
   await until(() => evaluate(`JSON.parse(localStorage.getItem('sb-${ref}-auth-token') || 'null')?.user?.id === ${JSON.stringify(userId)}`).trim() === 'true', 'Browser did not sign in');
+  await until(() => evaluate("document.querySelector('[role=dialog]') === null").trim() === 'true', 'Sign-in dialog did not close after authentication');
   run('find', 'label', 'New task', 'fill', 'Synced from the app'); run('press', 'Enter');
   let id;
   await until(async () => { const { data } = await remote.from('todos').select('*').eq('title', 'Synced from the app'); id = data?.[0]?.id; return !!id; }, 'App task did not reach Supabase');
@@ -39,7 +41,7 @@ try {
   await until(async () => (await remote.from('todos').select('id').eq('title', 'Created offline')).data?.length === 1, 'Offline task was not replayed');
   run('reload');
   await until(() => evaluate("document.body.innerText.includes('Created offline')").trim() === 'true', 'Task did not survive reload');
-  console.log('PASS: real app sign-in, app-to-cloud writes, remote-to-app changes, durable offline queue, reconnect replay, reload persistence');
+  console.log('PASS: automatic onboarding and dialog dismissal, app-to-cloud writes, remote-to-app changes, durable offline queue, reconnect replay, reload persistence');
 } finally {
   try { run('close'); } catch { /* Clean up the account even if the browser failed. */ }
   if (userId) { const { error } = await admin.auth.admin.deleteUser(userId); if (error) throw error; }

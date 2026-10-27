@@ -10,6 +10,16 @@ struct WidgetTodo: Codable, Identifiable {
 
 enum WidgetStore {
     private static var defaults: UserDefaults { UserDefaults(suiteName: BackendConfig.appGroup)! }
+    static var accentRGB: UInt32? {
+        guard let hex = defaults.string(forKey: "accent"), hex.count == 7, hex.first == "#" else { return nil }
+        return UInt32(hex.dropFirst(), radix: 16)
+    }
+    @discardableResult static func setAccent(_ value: String?) -> Bool {
+        if let value, value.range(of: "^#[0-9a-fA-F]{6}$", options: .regularExpression) == nil { return false }
+        guard defaults.string(forKey: "accent") != value else { return false }
+        defaults.set(value, forKey: "accent")
+        return true
+    }
     static func read() -> [WidgetTodo] {
         guard let session = SessionVault.read(), defaults.string(forKey: "userId") == session.user.id,
               let data = defaults.data(forKey: "tasks") else { return [] }

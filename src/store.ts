@@ -104,6 +104,7 @@ export async function synchronize(): Promise<void> {
 
 async function changeSession(session: Session | null) {
   const nextOwner = session?.user.id ?? "local";
+  window.__nativeSession = session ? { access_token: session.access_token, refresh_token: session.refresh_token } : undefined;
   window.webkit?.messageHandlers.todos?.postMessage({ type: "session", session });
   if (nextOwner === owner && state.ready) { emit({ session }); return; }
   generation++;
@@ -157,5 +158,5 @@ export async function startStore() {
     void synchronize();
   });
   // Also reconcile after reconnects, missed realtime messages, and widget writes.
-  setInterval(() => { if (!document.hidden) void synchronize(); }, 15000);
+  setInterval(() => { if (window.__nativePlatform || !document.hidden) void synchronize(); }, 15000);
 }
