@@ -15,6 +15,8 @@ body { margin: 0; }
 .task-list { flex: 1; display: flex; flex-direction: column; }
 ul { list-style: none; margin: 0; padding: 0; }
 .task { display: flex; align-items: center; gap: var(--space-m); padding-block: var(--space-xs); min-height: calc(var(--line-m) + var(--space-m)); }
+.task-items:focus { outline: none; }
+.task.selected { background: var(--neutral-3); border-radius: var(--radius-s); }
 .task-title { flex: 1; min-width: 0; overflow-wrap: anywhere; padding: var(--space-xxs) 0; background: none; border: 0; color: inherit; font: inherit; letter-spacing: inherit; text-align: left; white-space: pre-wrap; cursor: text; }
 .task-title:focus-visible { outline: var(--focus-ring-outline); border-radius: var(--radius-s); }
 .completed .task-title { color: var(--neutral-7); text-decoration: line-through; }
@@ -27,6 +29,7 @@ ul { list-style: none; margin: 0; padding: 0; }
 .new-task { display: flex; align-items: flex-start; gap: var(--space-m); padding-block: var(--space-xs); opacity: 0; transition: opacity var(--motion-duration) var(--motion-easing); }
 .draft-zone:hover .new-task { opacity: 0.45; }
 .new-task:focus-within, .draft-zone .new-task.has-draft { opacity: 1; }
+.draft-zone .new-task.is-dismissed { opacity: 0; }
 .draft-checkbox { display: flex; align-items: center; min-height: calc(var(--line-m) + var(--space-xs)); pointer-events: none; }
 .app svg { width: var(--size-m); height: var(--size-m); stroke-width: var(--icon-stroke-width); }
 .account-dialog { max-width: min(400px, calc(100vw - var(--space-xxl))); }

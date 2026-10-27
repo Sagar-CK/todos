@@ -132,7 +132,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
         menu.addItem(.separator())
         let quit = NSMenuItem(title: "Quit Todos", action: #selector(quitApp), keyEquivalent: "q"); quit.target = self; menu.addItem(quit)
         status.menu = menu
-        // Standard edit menu supplies Cmd+C/V/X/A inside the web view.
+        // Use native clipboard commands and the checklist's two-stage selection.
         let main = NSMenu()
         let appItem = NSMenuItem(); let appMenu = NSMenu(title: "Todos")
         appMenu.addItem(accent.copy() as! NSMenuItem)
@@ -149,9 +149,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
         let editItem = NSMenuItem(); let edit = NSMenu(title: "Edit")
         let undo = NSMenuItem(title: "Undo", action: #selector(undoAction), keyEquivalent: "z"); undo.target = self; edit.addItem(undo)
         edit.addItem(.separator())
-        for (title, selector, key) in [("Cut", "cut:", "x"), ("Copy", "copy:", "c"), ("Paste", "paste:", "v"), ("Select all", "selectAll:", "a")] {
+        for (title, selector, key) in [("Cut", "cut:", "x"), ("Copy", "copy:", "c"), ("Paste", "paste:", "v")] {
             edit.addItem(withTitle: title, action: NSSelectorFromString(selector), keyEquivalent: key)
         }
+        let selectAll = NSMenuItem(title: "Select all", action: #selector(selectAllAction), keyEquivalent: "a"); selectAll.target = self; edit.addItem(selectAll)
         editItem.submenu = edit; main.addItem(editItem); NSApp.mainMenu = main
         shortcut.onToggle = { [weak self] in
             guard let self else { return }
@@ -183,6 +184,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
     @objc func openAccount() { showPanel(); webView.evaluateJavaScript("window.dispatchEvent(new Event('todos-open-account'))") }
     @objc func switchAppearance() { webView.evaluateJavaScript("window.dispatchEvent(new Event('todos-switch-appearance'))") }
     @objc func undoAction() { webView.evaluateJavaScript("window.dispatchEvent(new Event('todos-undo'))") }
+    @objc func selectAllAction() { webView.evaluateJavaScript("window.dispatchEvent(new Event('todos-select-all'))") }
     @objc func quitApp() {
         if !isDemo { panel.saveFrame(usingName: "TodosPanel") }
         webView.evaluateJavaScript("window.dispatchEvent(new Event('todos-save-draft'))") { [weak self] _, _ in self?.shortcut.stop(); NSApp.terminate(nil) }

@@ -10,8 +10,11 @@ For hosted Supabase, authenticate the CLI on macOS or set `SUPABASE_ACCESS_TOKEN
 node tests/backend.integration.mjs
 # Start npm run dev in another terminal; install agent-browser first.
 node tests/sync.integration.mjs
+node tests/keyboard.integration.mjs
 ```
 
 The backend test verifies authenticated CRUD, cross-user isolation, anonymous access denial, Realtime changes, and deletion tombstones. The browser test uses an isolated agent-browser session and checks sign-in, sync in both directions, offline replay, and reload persistence.
+
+The keyboard test uses a separate signed-out browser session without backend writes. It checks two-stage selection, empty-row deletion, draft dismissal, cursor placement, and grouped undo.
 
 Device checks still required: Apple provisioning, magic-link handoff on an actual iPhone, widget appearance/taps, background refresh, and keyboard interaction on each macOS keyboard layout. The global shortcut uses physical key code 50, the US backtick key.

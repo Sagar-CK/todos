@@ -9,6 +9,7 @@ A small checklist for Mac and iPhone. Double-tap the backtick key, write somethi
 
 - Click beneath a task and type. Click away to save, or press Enter for the next row.
 - Edit in place. Delete immediately. Command-Z brings it back.
+- Backspace removes an empty row. Command-A selects its text; press it again to select all todos. Backspace deletes selected blocks, and one Command-Z restores them.
 - Checking or reopening a todo keeps it in place.
 - Drag the quiet top strip to move the Mac window. Close and color controls appear on hover. The window stays on top and remembers its position and size.
 - Command-W or Escape saves the draft and hides the window.

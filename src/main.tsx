@@ -1,8 +1,8 @@
-import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type FormEvent, type CSSProperties, type ComponentProps } from "react";
+import { useEffect, useImperativeHandle, useLayoutEffect, useRef, useState, useSyncExternalStore, type FormEvent, type CSSProperties, type ComponentProps, type Ref } from "react";
 import { createRoot } from "react-dom/client";
 import { Palette, X } from "lucide-react";
 import { Button, Checkbox, Dialog, GraphicalProvider, Input, Menu, theme, type ColorMode } from "@/components/graphical";
-import { addTask, patchTask, startStore, supabase, todoStore, undoLastAction } from "./store";
+import { addTask, deleteTasks, patchTask, startStore, supabase, todoStore, undoLastAction } from "./store";
 import type { Todo } from "./model";
 import { readAccent, saveAccent, accentInk, shouldOfferSignIn, markSignInOffered } from "./preferences";
 import "@/components/graphical/styles.css";
@@ -74,12 +74,29 @@ function AccentPicker({ value, change }: { value: string | null; change: (value:
   </>;
 }
 
-function TaskRow({ task, remove, accented }: { task: Todo; remove: () => void; accented: boolean }) {
+type TaskEditor = { edit: (selection: "all" | "end") => void };
+function TaskRow({ task, remove, removeEmpty, accented, selected, ref }: { task: Todo; remove: () => void; removeEmpty: () => void; accented: boolean; selected: boolean; ref: Ref<TaskEditor> }) {
   const [editing, setEditing] = useState(false);
   const [title, setTitle] = useState(task.title);
   const cancelled = useRef(false);
   const editor = useRef<HTMLTextAreaElement>(null);
+  const pendingSelection = useRef<"all" | "end" | null>(null);
+  useImperativeHandle(ref, () => ({ edit(selection) {
+    if (editing && editor.current) {
+      editor.current.focus();
+      editor.current.setSelectionRange(selection === "all" ? 0 : editor.current.value.length, editor.current.value.length);
+    } else {
+      pendingSelection.current = selection; cancelled.current = false; setTitle(task.title); setEditing(true);
+    }
+  } }));
   useLayoutEffect(() => { if (editor.current) { editor.current.style.height = "0"; editor.current.style.height = `${editor.current.scrollHeight}px`; } }, [editing, title]);
+  useLayoutEffect(() => {
+    if (editing && editor.current && pendingSelection.current) {
+      editor.current.focus();
+      editor.current.setSelectionRange(pendingSelection.current === "all" ? 0 : editor.current.value.length, editor.current.value.length);
+      pendingSelection.current = null;
+    }
+  }, [editing]);
   function save() {
     if (cancelled.current) return;
     cancelled.current = true;
@@ -87,9 +104,10 @@ function TaskRow({ task, remove, accented }: { task: Todo; remove: () => void; a
     if (next && next !== task.title) patchTask(task.id, { title: next });
     setEditing(false);
   }
-  return <li className={`task ${task.completed ? "completed" : ""}`}>
+  return <li className={`task ${task.completed ? "completed" : ""} ${selected ? "selected" : ""}`} data-task-id={task.id}>
     <TaskCheckbox accented={accented} checked={task.completed} onCheckedChange={checked => patchTask(task.id, { completed: checked === true })} aria-label={`${task.completed ? "Reopen" : "Complete"} ${task.title}`} />
     {editing ? <textarea ref={editor} className="inline-editor" aria-label="Task" value={title} onChange={e => setTitle(e.target.value)} onBlur={save} onKeyDown={e => {
+      if (e.key === "Backspace" && !title.trim() && !e.nativeEvent.isComposing && !e.repeat) { e.preventDefault(); e.stopPropagation(); cancelled.current = true; removeEmpty(); }
       if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); save(); }
       if (e.key === "Escape") { e.stopPropagation(); cancelled.current = true; setEditing(false); }
     }} autoFocus maxLength={2000} rows={1} />
@@ -132,6 +150,13 @@ function App() {
     return () => window.removeEventListener("todos-switch-appearance", switchMode);
   }, []);
   const input = useRef<HTMLTextAreaElement>(null);
+  const list = useRef<HTMLUListElement>(null);
+  const rowEditors = useRef(new Map<string, TaskEditor>());
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [draftDismissed, setDraftDismissed] = useState(false);
+  const selectAllArmed = useRef(false);
+  const preferBlockUndo = useRef(false);
+  const undoAction = useRef(() => {});
   const draft = useRef("");
   function saveDraft() {
     const value = draft.current.trim();
@@ -146,15 +171,62 @@ function App() {
       saveDraftRef.current();
     };
     window.addEventListener("todos-save-draft", save);
-    const undo = () => {
-      const active = document.activeElement;
-      if ((active instanceof HTMLTextAreaElement || active instanceof HTMLInputElement) && active.value) document.execCommand("undo");
-      else undoLastAction();
-    };
+    const undo = () => undoAction.current();
     window.addEventListener("todos-undo", undo);
     return () => { window.removeEventListener("todos-save-draft", save); window.removeEventListener("todos-undo", undo); };
   }, []);
   const tasks = state.tasks.filter(task => !task.deleted_at);
+  function clearBlocks() {
+    if (selectedIds.length) { setSelectedIds([]); window.getSelection()?.removeAllRanges(); }
+    selectAllArmed.current = false;
+  }
+  function removeRows(ids: string[]) {
+    if (deleteTasks(ids)) { preferBlockUndo.current = true; clearBlocks(); }
+  }
+  function removeEmptyRow(id?: string) {
+    const index = id ? tasks.findIndex(task => task.id === id) : tasks.length;
+    const previous = tasks[index - 1];
+    if (id) removeRows([id]);
+    else { draft.current = ""; setTitle(""); input.current?.blur(); }
+    setDraftDismissed(true); selectAllArmed.current = false;
+    if (previous) rowEditors.current.get(previous.id)?.edit("end");
+    else list.current?.focus();
+  }
+  function selectAll() {
+    const active = document.activeElement;
+    if (account || appearance || active?.closest('[role="dialog"]')) {
+      if (active instanceof HTMLInputElement || active instanceof HTMLTextAreaElement) active.select();
+      else document.execCommand("selectAll");
+      return;
+    }
+    if (selectAllArmed.current || selectedIds.length) {
+      selectAllArmed.current = true;
+      if (active instanceof HTMLElement) active.blur();
+      saveDraftRef.current();
+      const ids = todoStore.getSnapshot().tasks.filter(task => !task.deleted_at).map(task => task.id);
+      setSelectedIds(ids); setDraftDismissed(true);
+      requestAnimationFrame(() => {
+        if (!selectAllArmed.current || !list.current) return;
+        list.current.focus();
+        const range = document.createRange(); range.selectNodeContents(list.current);
+        window.getSelection()?.removeAllRanges(); window.getSelection()?.addRange(range);
+      });
+    } else {
+      if (active instanceof HTMLTextAreaElement) active.select();
+      else {
+        const id = active?.closest<HTMLElement>('[data-task-id]')?.dataset.taskId ?? tasks[0]?.id;
+        if (id) rowEditors.current.get(id)?.edit("all");
+        else { input.current?.focus(); input.current?.select(); }
+      }
+      selectAllArmed.current = true;
+    }
+  }
+  undoAction.current = () => {
+    const active = document.activeElement;
+    if (preferBlockUndo.current || !(active instanceof HTMLTextAreaElement || active instanceof HTMLInputElement)) {
+      clearBlocks(); undoLastAction(); preferBlockUndo.current = false;
+    } else document.execCommand("undo");
+  };
   useEffect(() => {
     const query = matchMedia("(prefers-color-scheme: dark)");
     const change = () => setMode(query.matches ? "dark" : "light"); query.addEventListener("change", change);
@@ -163,10 +235,17 @@ function App() {
   useEffect(() => {
     let lastTap = 0;
     const keydown = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "a") { event.preventDefault(); selectAll(); return; }
+      if (!["Meta", "Control", "Alt", "Shift"].includes(event.key)) selectAllArmed.current = false;
+      if (selectedIds.length && ["Backspace", "Delete"].includes(event.key) && !event.isComposing) {
+        event.preventDefault(); removeRows(selectedIds); setDraftDismissed(true); list.current?.focus(); return;
+      }
+      if (selectedIds.length && event.key === "Escape") { event.preventDefault(); clearBlocks(); list.current?.focus(); return; }
+      if (selectedIds.length && !event.metaKey && !event.ctrlKey && !["Meta", "Control", "Alt", "Shift"].includes(event.key)) clearBlocks();
       if ((event.metaKey || event.ctrlKey) && event.key === "n") { event.preventDefault(); input.current?.focus(); }
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "z" && !event.shiftKey) {
         const active = document.activeElement;
-        if (!((active instanceof HTMLTextAreaElement || active instanceof HTMLInputElement) && active.value)) { event.preventDefault(); undoLastAction(); }
+        if (preferBlockUndo.current || !(active instanceof HTMLTextAreaElement || active instanceof HTMLInputElement)) { event.preventDefault(); undoAction.current(); }
       }
       if (event.key === "Escape" && !account && !appearance && !document.querySelector('[role="menu"]')) {
         saveDraftRef.current();
@@ -179,9 +258,19 @@ function App() {
         if (lastTap && now - lastTap < 300) { setHidden(value => !value); lastTap = 0; } else lastTap = now;
       } else lastTap = 0;
     };
+    const resetSelection = () => clearBlocks();
+    const textEdited = () => { preferBlockUndo.current = false; selectAllArmed.current = false; };
     document.addEventListener("keydown", keydown);
-    return () => document.removeEventListener("keydown", keydown);
-  }, [account, appearance]);
+    document.addEventListener("pointerdown", resetSelection);
+    document.addEventListener("input", textEdited);
+    window.addEventListener("todos-select-all", selectAll);
+    return () => {
+      document.removeEventListener("keydown", keydown);
+      document.removeEventListener("pointerdown", resetSelection);
+      document.removeEventListener("input", textEdited);
+      window.removeEventListener("todos-select-all", selectAll);
+    };
+  }, [account, appearance, selectedIds, state.tasks]);
   return <GraphicalProvider document={theme} colorMode={mode}>
     <main className={`app ${window.__nativePlatform ? `native native-${window.__nativePlatform}` : "browser"}`} data-accent={accent ? "custom" : "default"} style={accent ? { "--todo-accent": accent, "--todo-accent-ink": accentInk(accent) } as CSSProperties : undefined}>
       {hidden ? <Button variant="ghost" onClick={() => setHidden(false)}>Open todos</Button> : <section className="checklist" aria-label="Todos">
@@ -193,11 +282,14 @@ function App() {
 
         </Menu.Popup></Menu.Positioner></Menu.Portal></Menu.Root></div>}
         <div className="task-list">
-          <ul>{tasks.map(task => <TaskRow key={task.id} task={task} accented={Boolean(accent)} remove={() => patchTask(task.id, { deleted_at: new Date().toISOString() })} />)}</ul>
-          <div className="draft-zone" onClick={() => input.current?.focus()}>
-            <div className={`new-task ${title ? "has-draft" : ""}`}>
+          <ul ref={list} className="task-items" tabIndex={-1}>{tasks.map(task => <TaskRow key={task.id} ref={editor => { if (editor) rowEditors.current.set(task.id, editor); else rowEditors.current.delete(task.id); }} task={task} accented={Boolean(accent)} selected={selectedIds.includes(task.id)} remove={() => removeRows([task.id])} removeEmpty={() => removeEmptyRow(task.id)} />)}</ul>
+          <div className="draft-zone" onPointerEnter={() => setDraftDismissed(false)} onClick={() => { setDraftDismissed(false); input.current?.focus(); }}>
+            <div className={`new-task ${title ? "has-draft" : ""} ${draftDismissed ? "is-dismissed" : ""}`}>
               <span className="draft-checkbox" aria-hidden="true"><TaskCheckbox accented={Boolean(accent)} disabled tabIndex={-1} /></span>
-              <textarea ref={input} className="inline-editor" aria-label="New task" value={title} onChange={e => { draft.current = e.target.value; setTitle(e.target.value); }} onBlur={saveDraft} onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); saveDraft(); } }} maxLength={2000} disabled={!state.ready} rows={1} />
+              <textarea ref={input} className="inline-editor" aria-label="New task" value={title} onFocus={() => setDraftDismissed(false)} onChange={e => { draft.current = e.target.value; setTitle(e.target.value); }} onBlur={saveDraft} onKeyDown={e => {
+                if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); saveDraft(); }
+                if (e.key === "Backspace" && !title.trim() && !e.nativeEvent.isComposing && !e.repeat) { e.preventDefault(); e.stopPropagation(); removeEmptyRow(); }
+              }} maxLength={2000} disabled={!state.ready} rows={1} />
             </div>
           </div>
         </div>

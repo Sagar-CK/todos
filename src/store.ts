@@ -11,7 +11,8 @@ let channel: RealtimeChannel | undefined;
 let activeSync: Promise<void> | undefined;
 const listeners = new Set<() => void>();
 const key = (id = owner) => `sagar-todos:v1:${id}`;
-const undoStack: { taskId: string; patch: Patch }[] = [];
+type UndoEdit = { taskId: string; patch: Patch };
+const undoStack: UndoEdit[][] = [];
 
 function emit(patch: Partial<Snapshot>) {
   state = { ...state, ...patch };
@@ -30,6 +31,14 @@ function save(cache: Cache) {
 }
 export const todoStore = { subscribe(fn: () => void) { listeners.add(fn); return () => { listeners.delete(fn); }; }, getSnapshot: () => state };
 
+function commit(operations: Operation[], inverse?: UndoEdit[]) {
+  if (!state.ready || !operations.length) return false;
+  const saved = save({ tasks: applyOperations(state.tasks, operations), pending: [...state.pending, ...operations] });
+  if (saved && inverse?.length) { undoStack.push(inverse); if (undoStack.length > 100) undoStack.shift(); }
+  if (saved) void synchronize();
+  return saved;
+}
+
 export function mutate(operation: Operation, recordUndo = true) {
   if (!state.ready) return false;
   let inverse: { taskId: string; patch: Patch } | undefined;
@@ -46,11 +55,7 @@ export function mutate(operation: Operation, recordUndo = true) {
       }
     }
   }
-  const pending = [...state.pending, operation];
-  const saved = save({ tasks: applyOperations(state.tasks, [operation]), pending });
-  if (saved && inverse) { undoStack.push(inverse); if (undoStack.length > 100) undoStack.shift(); }
-  if (saved) void synchronize();
-  return saved;
+  return commit([operation], inverse ? [inverse] : undefined);
 }
 export function addTask(title: string) {
   title = title.trim();
@@ -61,9 +66,18 @@ export function addTask(title: string) {
 export function patchTask(taskId: string, patch: Patch) {
   mutate({ id: crypto.randomUUID(), kind: "patch", taskId, patch });
 }
+export function deleteTasks(ids: string[]) {
+  const selected = new Set(ids);
+  const tasks = state.tasks.filter(task => selected.has(task.id) && !task.deleted_at);
+  const deleted_at = new Date().toISOString();
+  return commit(
+    tasks.map(task => ({ id: crypto.randomUUID(), kind: "patch", taskId: task.id, patch: { deleted_at } })),
+    tasks.map(task => ({ taskId: task.id, patch: { deleted_at: task.deleted_at } })),
+  );
+}
 export function undoLastAction() {
   const previous = undoStack.at(-1);
-  if (previous && mutate({ id: crypto.randomUUID(), kind: "patch", taskId: previous.taskId, patch: previous.patch }, false)) undoStack.pop();
+  if (previous && commit(previous.map(edit => ({ id: crypto.randomUUID(), kind: "patch", ...edit })))) undoStack.pop();
 }
 
 export async function synchronize(): Promise<void> {
