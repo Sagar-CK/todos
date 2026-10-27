@@ -4,4 +4,6 @@ The README images are actual Mac app captures from `--demo`, edited in CleanShot
 
 Use `--demo` for dark mode or `--demo --light` for light mode. Use the 440 × 340 demo window, capture in dark and light modes, and crop to the window. In CleanShot's background tool choose the soft gray/pink/cyan gradient (second row, second preset), padding 90, shadow 30, and corners 24. Save PNGs in `docs/images`.
 
+For an accent screenshot, launch `--demo '--accent=#ff4b62'`. This applies the color only inside the temporary demo session. The release gallery shows dark, light, and accent variants from the native Mac app.
+
 No iPhone/widget screenshot is included until the native app has been built and captured on a device or simulator. Browser mockups are not presented as device screenshots.

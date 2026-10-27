@@ -88,6 +88,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
             localStorage.setItem('sagar-todos:v1:local', JSON.stringify({tasks, pending: []}));
             """
             config.userContentController.addUserScript(WKUserScript(source: demo, injectionTime: .atDocumentStart, forMainFrameOnly: true))
+            if let argument = CommandLine.arguments.first(where: { $0.hasPrefix("--accent=") }) {
+                let accent = String(argument.dropFirst(9))
+                if accent.range(of: "^#[0-9a-fA-F]{6}$", options: .regularExpression) != nil {
+                    config.userContentController.addUserScript(WKUserScript(source: "localStorage.setItem('todos:accent', '\(accent)');", injectionTime: .atDocumentStart, forMainFrameOnly: true))
+                }
+            }
         }
         config.userContentController.add(self, name: "todos")
         config.userContentController.addUserScript(WKUserScript(source: "window.__nativePlatform = 'mac';", injectionTime: .atDocumentStart, forMainFrameOnly: true))

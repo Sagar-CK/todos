@@ -15,11 +15,24 @@ async function until(expression, message) {
 const titles = () => read('[...document.querySelectorAll(".task")].map(row => row.querySelector(".task-title")?.textContent ?? row.querySelector("textarea").value)');
 try {
   run('open', 'http://127.0.0.1:5186');
+  read('localStorage.setItem("todos:sign-in-offered", "true"); true');
+  run('reload');
   await until('document.querySelector(".new-task textarea")?.disabled === false', 'Editor did not become ready');
   if (read('!!document.querySelector("[role=dialog]")')) run('find', 'role', 'button', 'click', '--name', 'Close');
   for (const title of ['Alpha', 'Beta', 'Gamma']) {
     run('find', 'label', 'New task', 'fill', title); run('press', 'Enter');
+    assert.equal(read('document.activeElement.getAttribute("aria-label")'), 'New task', 'Enter must keep the next empty bullet focused from the first task onward');
   }
+  run('find', 'role', 'button', 'click', '--name', 'Edit Alpha');
+  run('find', 'label', 'Task', 'fill', 'Alpha edited', '--exact');
+  run('press', 'End'); run('press', 'Enter');
+  assert.equal(read('document.activeElement.getAttribute("aria-label")'), 'New task', 'Enter from the first saved todo must continue into a new bullet');
+  assert.deepEqual(titles(), ['Alpha edited', 'Beta', 'Gamma']);
+  run('find', 'label', 'New task', 'fill', 'Fourth'); run('press', 'Enter');
+  assert.deepEqual(titles(), ['Alpha edited', 'Beta', 'Gamma', 'Fourth']);
+  run('find', 'role', 'button', 'click', '--name', 'Delete Fourth');
+  run('find', 'role', 'button', 'click', '--name', 'Edit Alpha edited');
+  run('find', 'label', 'Task', 'fill', 'Alpha', '--exact'); run('press', 'Enter');
   run('find', 'role', 'button', 'click', '--name', 'Edit Beta');
   run('press', 'Meta+a');
   assert.equal(read('document.activeElement.value.slice(document.activeElement.selectionStart, document.activeElement.selectionEnd)'), 'Beta');
@@ -64,7 +77,7 @@ try {
   run('reload');
   await until('document.querySelectorAll(".task").length === 3', 'Restored blocks did not survive reload');
   assert.deepEqual(titles(), ['Alpha', 'Beta', 'Gamma']);
-  console.log('PASS: two-stage Cmd+A, native selection action, empty-row Backspace, draft dismissal, previous-row caret, grouped delete/undo, reload persistence');
+  console.log('PASS: Enter from first/new/saved rows, two-stage Cmd+A, native selection action, empty-row Backspace, draft dismissal, previous-row caret, grouped delete/undo, reload persistence');
 } finally {
   try { run('close'); } catch { /* The temporary browser may already have closed. */ }
 }

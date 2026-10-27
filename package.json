@@ -9,6 +9,8 @@
     "preview": "vite preview --host 127.0.0.1 --port 5186 --strictPort",
     "mac:build": "npm run build && bash scripts/build-mac.sh",
     "mac": "npm run mac:build && open build/Todos.app",
+    "release:mac": "node scripts/release-mac.mjs",
+    "ios:handoff": "node scripts/handoff-ios.mjs",
     "test": "node --experimental-strip-types --test tests/*.test.ts tests/*.test.mjs",
     "ios:prepare": "bash scripts/prepare-ios.sh"
   },

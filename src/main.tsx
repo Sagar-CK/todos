@@ -75,7 +75,7 @@ function AccentPicker({ value, change }: { value: string | null; change: (value:
 }
 
 type TaskEditor = { edit: (selection: "all" | "end") => void };
-function TaskRow({ task, remove, removeEmpty, accented, selected, ref }: { task: Todo; remove: () => void; removeEmpty: () => void; accented: boolean; selected: boolean; ref: Ref<TaskEditor> }) {
+function TaskRow({ task, remove, removeEmpty, continueEntry, accented, selected, ref }: { task: Todo; remove: () => void; removeEmpty: () => void; continueEntry: () => void; accented: boolean; selected: boolean; ref: Ref<TaskEditor> }) {
   const [editing, setEditing] = useState(false);
   const [title, setTitle] = useState(task.title);
   const cancelled = useRef(false);
@@ -108,7 +108,7 @@ function TaskRow({ task, remove, removeEmpty, accented, selected, ref }: { task:
     <TaskCheckbox accented={accented} checked={task.completed} onCheckedChange={checked => patchTask(task.id, { completed: checked === true })} aria-label={`${task.completed ? "Reopen" : "Complete"} ${task.title}`} />
     {editing ? <textarea ref={editor} className="inline-editor" aria-label="Task" value={title} onChange={e => setTitle(e.target.value)} onBlur={save} onKeyDown={e => {
       if (e.key === "Backspace" && !title.trim() && !e.nativeEvent.isComposing && !e.repeat) { e.preventDefault(); e.stopPropagation(); cancelled.current = true; removeEmpty(); }
-      if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); save(); }
+      if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); save(); continueEntry(); }
       if (e.key === "Escape") { e.stopPropagation(); cancelled.current = true; setEditing(false); }
     }} autoFocus maxLength={2000} rows={1} />
       : <button type="button" className="task-title" aria-label={`Edit ${task.title}`} onClick={() => { cancelled.current = false; setTitle(task.title); setEditing(true); }}>{task.title}</button>}
@@ -282,7 +282,7 @@ function App() {
 
         </Menu.Popup></Menu.Positioner></Menu.Portal></Menu.Root></div>}
         <div className="task-list">
-          <ul ref={list} className="task-items" tabIndex={-1}>{tasks.map(task => <TaskRow key={task.id} ref={editor => { if (editor) rowEditors.current.set(task.id, editor); else rowEditors.current.delete(task.id); }} task={task} accented={Boolean(accent)} selected={selectedIds.includes(task.id)} remove={() => removeRows([task.id])} removeEmpty={() => removeEmptyRow(task.id)} />)}</ul>
+          <ul ref={list} className="task-items" tabIndex={-1}>{tasks.map(task => <TaskRow key={task.id} ref={editor => { if (editor) rowEditors.current.set(task.id, editor); else rowEditors.current.delete(task.id); }} task={task} accented={Boolean(accent)} selected={selectedIds.includes(task.id)} remove={() => removeRows([task.id])} removeEmpty={() => removeEmptyRow(task.id)} continueEntry={() => { clearBlocks(); setDraftDismissed(false); input.current?.focus(); }} />)}</ul>
           <div className="draft-zone" onPointerEnter={() => setDraftDismissed(false)} onClick={() => { setDraftDismissed(false); input.current?.focus(); }}>
             <div className={`new-task ${title ? "has-draft" : ""} ${draftDismissed ? "is-dismissed" : ""}`}>
               <span className="draft-checkbox" aria-hidden="true"><TaskCheckbox accented={Boolean(accent)} disabled tabIndex={-1} /></span>

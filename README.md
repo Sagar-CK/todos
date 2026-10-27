@@ -3,8 +3,9 @@
 A small checklist for Mac and iPhone. Double-tap the backtick key, write something down, get back to what you were doing.
 
 <p align="center">
-  <img src="docs/images/mac-dark.png" alt="Todos on Mac in dark mode, on a soft pastel background" width="46%">
-  <img src="docs/images/mac-light.png" alt="Todos on Mac in light mode, on a soft pastel background" width="46%">
+  <img src="docs/images/mac-dark.png" alt="Todos on Mac in dark mode, on a soft pastel background" width="31%">
+  <img src="docs/images/mac-light.png" alt="Todos on Mac in light mode, on a soft pastel background" width="31%">
+  <img src="docs/images/mac-accent.png" alt="Todos on Mac with coral checkboxes, on a soft pastel background" width="31%">
 </p>
 
 - Click beneath a task and type. Click away to save, or press Enter for the next row.
@@ -19,6 +20,16 @@ A small checklist for Mac and iPhone. Double-tap the backtick key, write somethi
 - iOS app and interactive WidgetKit widget included. iOS 17+; device installation requires Xcode and signing.
 
 Screenshots show the Mac app in an isolated demo session. Normal launches start empty. This is an early source release; iPhone installation and widget appearance still need device validation.
+
+## Download
+
+Mac packages are attached to [GitHub Releases](https://github.com/Sagar-CK/todos/releases) when published. Unzip the **macOS Apple Silicon ZIP** and move Todos to Applications. Requires macOS 14 or later. The download works locally; build from source below to connect your own Supabase backend. Public binaries contain no personal backend configuration.
+
+The Mac download is ad-hoc signed and is not notarized. macOS may require you to approve it in Privacy & Security; see [Apple’s instructions for opening an app from an unidentified developer](https://support.apple.com/guide/mac-help/open-a-mac-app-from-an-unknown-developer-mh40616/mac). Check the release’s SHA256SUMS.txt to verify the download.
+
+**iPhone:** this release includes the app and widget source, not an installable IPA or TestFlight invitation. Follow the Xcode setup below. Signing and provisioning are required before it can run on a phone; a ZIP downloaded from GitHub cannot install an iPhone app.
+
+Moving development to another Mac? See the [iPhone handoff guide](docs/IPHONE_HANDOFF.md). `npm run ios:handoff` creates a private, ready-to-open Xcode snapshot using your client configuration; it is not a public release asset.
 
 ## Run on your Mac
 
@@ -89,6 +100,7 @@ npm run dev           # Browser preview at http://127.0.0.1:5186
 npm run mac:build     # Standalone AppKit + WKWebView app
 npm run ios:prepare   # Generate configuration, embed UI, regenerate Xcode project
 npm test             # Merge/outbox and configuration tests
+npm run release:mac  # Package a clean, local-only public build from committed source
 ```
 
 Rerun `ios:prepare` after changing the UI or configuration. Generated files are not hand-edited. The Mac menu bar provides **Accent color…**, **Switch appearance**, and **Account…**. The small palette button appears in the window’s top-right corner only on hover.
